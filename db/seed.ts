@@ -1,3 +1,7 @@
+import * as dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
+
 import { db, schema } from "@/lib/db";
 import { hashSecret } from "@/lib/security";
 import { calculateLeadScore } from "@/services/lead-scoring";
