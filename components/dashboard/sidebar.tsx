@@ -13,17 +13,26 @@ import {
   LogOut,
   Building2,
   Sparkles,
+  X,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { logoutAction } from "@/app/actions/workspace";
 import { UserSession } from "@/lib/auth/constants";
 
-interface SidebarProps {
+interface SidebarContentProps {
   session: UserSession;
+  onNavigate?: () => void;
+  showCloseButton?: boolean;
+  onClose?: () => void;
 }
 
-export function Sidebar({ session }: SidebarProps) {
+function SidebarContent({
+  session,
+  onNavigate,
+  showCloseButton,
+  onClose,
+}: SidebarContentProps) {
   const pathname = usePathname();
 
   const navItems = [
@@ -83,12 +92,12 @@ export function Sidebar({ session }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 border-r bg-card flex flex-col justify-between shrink-0 select-none h-screen sticky top-0">
-      <div>
+    <>
+      <div className="flex-1 overflow-y-auto">
         {/* Workspace Brand Header */}
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-base shadow-sm">
+        <div className="p-4 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-base shadow-sm shrink-0">
               P
             </div>
             <div className="flex-1 min-w-0">
@@ -96,7 +105,7 @@ export function Sidebar({ session }: SidebarProps) {
                 <span className="font-semibold text-sm tracking-tight text-foreground truncate">
                   PulseCRM
                 </span>
-                <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20">
+                <span className="text-[10px] font-mono bg-primary/10 text-primary px-1.5 py-0.2 rounded border border-primary/20 shrink-0">
                   v3
                 </span>
               </div>
@@ -106,6 +115,16 @@ export function Sidebar({ session }: SidebarProps) {
               </div>
             </div>
           </div>
+          {showCloseButton && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors md:hidden shrink-0"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
         {/* Navigation Items */}
@@ -122,6 +141,7 @@ export function Sidebar({ session }: SidebarProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                   item.active
@@ -138,7 +158,7 @@ export function Sidebar({ session }: SidebarProps) {
       </div>
 
       {/* Footer User Profile & Demo Mode Tag */}
-      <div className="p-3 border-t bg-muted/30">
+      <div className="p-3 border-t bg-muted/30 shrink-0">
         {session.isDemoMode && (
           <div className="mb-2 p-2 rounded bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -148,7 +168,7 @@ export function Sidebar({ session }: SidebarProps) {
 
         <div className="flex items-center justify-between gap-2 p-1.5 rounded-md hover:bg-accent transition-colors">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-medium text-xs font-mono border">
+            <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-medium text-xs font-mono border shrink-0">
               {getInitials(session.fullName)}
             </div>
             <div className="min-w-0 flex-1">
@@ -167,14 +187,88 @@ export function Sidebar({ session }: SidebarProps) {
           </div>
 
           <button
-            onClick={() => logoutAction()}
+            onClick={() => {
+              onNavigate?.();
+              logoutAction();
+            }}
             title="Switch Session"
-            className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
           >
             <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>
+    </>
+  );
+}
+
+interface SidebarProps {
+  session: UserSession;
+  className?: string;
+}
+
+export function Sidebar({ session, className }: SidebarProps) {
+  return (
+    <aside
+      className={cn(
+        "hidden md:flex w-64 border-r bg-card flex-col justify-between shrink-0 select-none h-screen sticky top-0",
+        className
+      )}
+    >
+      <SidebarContent session={session} />
     </aside>
+  );
+}
+
+interface MobileSidebarProps {
+  session: UserSession;
+  open: boolean;
+  onClose: () => void;
+}
+
+export function MobileSidebar({ session, open, onClose }: MobileSidebarProps) {
+  const pathname = usePathname();
+
+  // Close automatically whenever pathname changes
+  React.useEffect(() => {
+    onClose();
+  }, [pathname, onClose]);
+
+  // Lock body scroll and close on Escape
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (open) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 md:hidden flex">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Drawer Sheet */}
+      <div className="relative z-50 w-72 max-w-[85vw] bg-card border-r shadow-2xl flex flex-col justify-between h-full select-none animate-slide-in-left">
+        <SidebarContent
+          session={session}
+          onNavigate={onClose}
+          showCloseButton
+          onClose={onClose}
+        />
+      </div>
+    </div>
   );
 }
